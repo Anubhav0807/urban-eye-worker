@@ -117,7 +117,7 @@ function AuthScreen() {
             >
               <View style={styles.container}>
                 <View style={styles.header}>
-                  <Text style={styles.title}>Urban Eye</Text>
+                  <Text style={styles.title}>Urban Eye Worker</Text>
                   <Text>Your eyes Our service</Text>
                 </View>
                 <TextInput

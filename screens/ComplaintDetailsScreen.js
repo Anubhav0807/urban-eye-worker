@@ -5,11 +5,12 @@ import {
   useEffect,
   useLayoutEffect,
 } from "react";
+
 import { View, ScrollView, StyleSheet, Text, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { reverseGeocode } from "../utils";
+import { reverseGeocode, uploadImage } from "../utils";
 
 import ImagePicker from "../components/ImagePicker";
 import Button from "../components/Button";
@@ -72,17 +73,18 @@ function ComplaintDetailsScreen({ navigation, route }) {
   async function handleGrabJob() {
     try {
       setIsLoading(true);
-      await api.patch(
-        "/complaint/grab-job",
-        {
-          complaintId: complaint.id,
+
+      const payload = {
+        complaintId: complaint.id,
+        workername: userContext.user.username,
+      };
+
+      await api.patch("/complaint/grab-job", payload, {
+        headers: {
+          Authorization: `Bearer ${userContext.user.token}`,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${userContext.user.token}`,
-          },
-        },
-      );
+      });
+
       Alert.alert("Success", "Grabed the job successfully.", [
         {
           text: "OK",
@@ -93,13 +95,94 @@ function ComplaintDetailsScreen({ navigation, route }) {
         },
       ]);
     } catch (error) {
-      Alert.alert("Error", "Failed to grab to job.");
+      if (error.response?.status === 401) {
+        Alert.alert(
+          "Submission Failed",
+          "Your session has expired. Please login again.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                userContext.clearUser();
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert("Error", "Something went wrong. Failed to grab to job.");
+      }
     } finally {
       setIsLoading(false);
     }
   }
 
-  function handleSubmit() {}
+  async function handleSubmit() {
+    if (!pickedImage) {
+      Alert.alert("Error", "Please upload an image as proof of work.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const uploaded = await uploadImage(pickedImage.uri);
+
+      if (uploaded == null) {
+        Alert.alert(
+          "Submission Failed",
+          "Something went wrong during uploading the image.",
+        );
+        return;
+      }
+
+      const payload = {
+        complaintId: complaint.id,
+        imageUri: uploaded.secure_url,
+        publicId: uploaded.public_id,
+      };
+
+      await api.patch("/complaint/submit-work", payload, {
+        headers: {
+          Authorization: `Bearer ${userContext.user.token}`,
+        },
+      });
+
+      Alert.alert("Success", "Work submitted for verification!", [
+        {
+          text: "OK",
+          onPress: () => {
+            complaintsCtx.submitComplaint({
+              ...complaint,
+              finalImageUri: uploaded.secure_url,
+            });
+            navigation.goBack();
+          },
+        },
+      ]);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        Alert.alert(
+          "Submission Failed",
+          "Your session has expired. Please login again.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                userContext.clearUser();
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert(
+          "Submission Failed",
+          "Something went wrong. Make sure you are connected to the internet.",
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.root} edges={["bottom"]}>
@@ -107,9 +190,7 @@ function ComplaintDetailsScreen({ navigation, route }) {
         <View style={styles.imageContainer}>
           <Image
             source={{
-              uri:
-                complaint.imageUri ??
-                `data:${complaint.imageType};base64,${complaint.imageBase64}`,
+              uri: complaint.finalImageUri ?? complaint.imageUri,
             }}
             style={styles.image}
           />
@@ -136,7 +217,7 @@ function ComplaintDetailsScreen({ navigation, route }) {
         )}
 
         {complaint.status === "In Progress" && (
-          <>
+          <View style={styles.container}>
             <ImagePicker
               pickedImage={pickedImage}
               setPickedImage={setPickedImage}
@@ -150,7 +231,7 @@ function ComplaintDetailsScreen({ navigation, route }) {
             >
               Submit for review
             </Button>
-          </>
+          </View>
         )}
 
         <View style={styles.locationContainer}>
@@ -206,6 +287,9 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     margin: 16,
+  },
+  container: {
+    alignItems: "center",
   },
   button: {
     backgroundColor: "#f3797e",

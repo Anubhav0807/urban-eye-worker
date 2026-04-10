@@ -6,6 +6,7 @@ export const ComplaintsContext = createContext({
   setAssignedComplaints: (complaints) => {},
   setNewComplaints: (complaints) => {},
   assignComplaint: (complaint) => {},
+  submitComplaint: (complaint) => {},
 });
 
 function complaintReducer(state, action) {
@@ -15,7 +16,7 @@ function complaintReducer(state, action) {
     case "SET_NEW":
       return { ...state, newComplaints: [...action.payload].reverse() };
     case "ASSIGN":
-      const updatedComplaint = {
+      var updatedComplaint = {
         ...action.payload,
         status: "In Progress",
       };
@@ -25,6 +26,20 @@ function complaintReducer(state, action) {
         newComplaints: state.newComplaints.filter(
           (complaint) => complaint.id != updatedComplaint.id,
         ),
+      };
+    case "SUBMIT":
+      var updatedComplaint = {
+        ...action.payload,
+        status: "Under Review",
+      };
+      return {
+        ...state,
+        assignedComplaints: [
+          updatedComplaint,
+          ...state.assignedComplaints.filter(
+            (complaint) => complaint.id != updatedComplaint.id,
+          ),
+        ],
       };
     default:
       return state;
@@ -49,12 +64,17 @@ function ComplaintsContextProvider({ children }) {
     dispatch({ type: "ASSIGN", payload: complaint });
   }
 
+  function submitComplaint(complaint) {
+    dispatch({ type: "SUBMIT", payload: complaint });
+  }
+
   const value = {
     assignedComplaints: complaintsState.assignedComplaints,
     newComplaints: complaintsState.newComplaints,
     setAssignedComplaints: setAssignedComplaints,
     setNewComplaints: setNewComplaints,
     assignComplaint: assignComplaint,
+    submitComplaint: submitComplaint,
   };
 
   return (
