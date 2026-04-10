@@ -24,6 +24,7 @@ function ComplaintDetailsScreen({ navigation, route }) {
   const complaintsCtx = useContext(ComplaintsContext);
   const userContext = useContext(UserContext);
 
+  const isMounted = useRef(true);
   const mapRef = useRef(null);
   const [address, setAddress] = useState("");
 
@@ -40,6 +41,10 @@ function ComplaintDetailsScreen({ navigation, route }) {
     }
 
     getAddress();
+
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -90,7 +95,7 @@ function ComplaintDetailsScreen({ navigation, route }) {
           text: "OK",
           onPress: () => {
             complaintsCtx.assignComplaint(complaint);
-            navigation.goBack();
+            if (isMounted.current) navigation.goBack();
           },
         },
       ]);
@@ -155,7 +160,7 @@ function ComplaintDetailsScreen({ navigation, route }) {
               ...complaint,
               finalImageUri: uploaded.secure_url,
             });
-            navigation.goBack();
+            if (isMounted.current) navigation.goBack();
           },
         },
       ]);
