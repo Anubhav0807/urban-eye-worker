@@ -1,0 +1,68 @@
+import "dotenv/config";
+
+export default {
+  expo: {
+    name: "Urban Eye Worker",
+    slug: "urban-eye-worker",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/icon.png",
+    userInterfaceStyle: "light",
+    backgroundColor: "#98bdff",
+    newArchEnabled: true,
+    splash: {
+      image: "./assets/splash-icon.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff",
+    },
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.anubhav0807.urbaneyeworker",
+      config: {
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      },
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#ffffff",
+      },
+      edgeToEdgeEnabled: true,
+      permissions: [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+      ],
+      package: "com.anubhav0807.urbaneyeworker",
+      config: {
+        googleMaps: {
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+        },
+      },
+    },
+    web: {
+      favicon: "./assets/favicon.png",
+    },
+    plugins: [
+      [
+        "expo-image-picker",
+        {
+          photosPermission:
+            "We need access to your photos so you can attach it as proof of completed work.",
+          cameraPermission:
+            "We need access to your camera so you can capture images as proof of completed work.",
+        },
+      ],
+      [
+        "expo-location",
+        {
+          locationWhenInUsePermission:
+            "We need access to your location to show it on the map.",
+        },
+      ],
+    ],
+  },
+};

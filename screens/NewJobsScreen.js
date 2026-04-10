@@ -1,13 +1,129 @@
-import { Text, StyleSheet } from "react-native";
+import { useContext, useEffect, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import Button from "../components/Button";
+import Fallback from "../components/Fallback";
+import ComplaintList from "../components/ComplaintList";
+
+import { ComplaintsContext } from "../store/complaints-context";
+import { UserContext } from "../store/user-context";
+
+import api from "../api";
+
 function NewJobsScreen() {
+  const complaintsContext = useContext(ComplaintsContext);
+  const userContext = useContext(UserContext);
+
+  const [errorType, setErrorType] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchComplaints();
+  }, []);
+
+  async function fetchComplaints() {
+    try {
+      setErrorType(null);
+
+      const response = await api.get("/complaints/new-jobs?lat=0&lng=0", {
+        headers: {
+          Authorization: `Bearer ${userContext.user.token}`,
+        },
+      });
+
+      complaintsContext.setNewComplaints(response.data);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        setErrorType(ErrorType.SESSION_EXPIRED);
+        Alert.alert(
+          "Session Expired",
+          "Your session has expired. Please login again.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                userContext.clearUser();
+              },
+            },
+          ],
+        );
+      } else {
+        setErrorType(ErrorType.OTHER);
+      }
+    }
+  }
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await fetchComplaints();
+    setRefreshing(false);
+  }
+
+  useEffect(() => {
+    async function load() {
+      setIsLoading(true);
+      await fetchComplaints();
+      setIsLoading(false);
+    }
+    load();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size={64} color="#4b49ac" />
+      </View>
+    );
+  }
+
+  if (errorType === ErrorType.SESSION_EXPIRED) {
+    return (
+      <View style={styles.center}>
+        <Text>Your session has expired.</Text>
+        <Text>Please login again.</Text>
+      </View>
+    );
+  }
+
+  if (errorType === ErrorType.OTHER) {
+    return (
+      <View style={styles.center}>
+        <Text>Something went wrong.</Text>
+        <Text>Make sure you are connected to the internet.</Text>
+        <Button
+          onPress={fetchComplaints}
+          iconRight="refresh"
+          style={styles.refreshButton}
+        >
+          Refresh
+        </Button>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.root} edges={["bottom"]}>
-      <Text>New Jobs will be shown here!</Text>
+      <View style={styles.container}>
+        {complaintsContext.newComplaints.length > 0 ? (
+          <ComplaintList
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            type="new"
+          />
+        ) : (
+          <Fallback refreshing={refreshing} onRefresh={onRefresh} />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
+
+const ErrorType = {
+  SESSION_EXPIRED: "SESSION_EXPIRED",
+  OTHER: "OTHER",
+};
 
 export default NewJobsScreen;
 
@@ -15,5 +131,25 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#98bdff",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#98bdff",
+  },
+  container: {
+    flex: 1,
+    padding: 8,
+  },
+  newComplaintButton: {
+    backgroundColor: "#f3797e",
+    alignSelf: "center",
+    marginVertical: 8,
+  },
+  refreshButton: {
+    backgroundColor: "#f3797e",
+    marginTop: 16,
+    padding: 8,
   },
 });
